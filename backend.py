@@ -2,6 +2,13 @@ from pydantic import BaseModel
 from typing import List
 from fastapi import FastAPI
 from ai_agent import get_response_from_ai_agent
+import os
+
+# ----------------------------------
+# Config (Environment Friendly)
+# ----------------------------------
+HOST = os.getenv("HOST", "0.0.0.0")
+PORT = int(os.getenv("POST", 9999))
 
 
 class RequestState(BaseModel):
@@ -11,13 +18,19 @@ class RequestState(BaseModel):
     messages: List[str]
     allow_search: bool
 
-
+#API_URL = "http://0.0.0.0:9999/chat"
 
 ALLOWED_MODEL_NAMES= ['llama3-70b-8192', 'mixtral-8x7b-32768', 'llama-3.3-70b-versatile', 'gpt-4o-mini']
 
 
 #Step2: Setup AI Agent from FrontEnd Request
 app = FastAPI(title="LangGraph AI Agent")
+
+# Health Check (for Docker)
+# ---------------------------
+def health_check():
+    return {'status': 'running'}
+
 
 @app.post("/chat")
 def chat_endpoint(request: RequestState):
@@ -35,11 +48,24 @@ def chat_endpoint(request: RequestState):
     provider = request.model_provider
 
     # Create AI Agent and get response from it!
-    response = get_response_from_ai_agent(llm_id, query, allow_search, system_prompt, provider)
+    response = get_response_from_ai_agent(
+        llm_id = llm_id,
+        query = query,
+        allow_search = allow_search,
+        system_prompt = system_prompt,
+        provider = provider
+    )
     return response
 
 
 #Step3: Run app & Explore Swagger UI Docs
 if __name__=="__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=9999)
+   
+    #uvicorn.run(app, host="127.0.0.1", port=9999)
+    uvicorn.run(
+        "backend:app",
+        host=HOST,
+        port=PORT,
+        reload=True
+    )
